@@ -1,0 +1,125 @@
+---
+title: "Supplement file"
+author: "Akihiro Shiroshita"
+date: "`r Sys.time()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	fig.height = 4,
+	fig.pos = "t",
+	message = FALSE,
+	warning = FALSE,
+	dpi = 350,
+	out.extra = ""
+)
+
+packages = c("devtools",
+             "usethis",
+             "here",
+             "readr",
+             "data.table",
+             "readxl",
+             "tidyverse",
+             "ggplot2",
+             "effects",
+             "margins",
+             "RColorBrewer",
+             "plotly",
+             "cowplot")
+package.check <- lapply(packages, FUN = function(x){
+  if (!require(x, character.only = TRUE)){
+    install.packages(x, dependencies = TRUE)
+    library(x, character.only = TRUE)
+  }
+})
+
+```
+
+```{r echo=FALSE}
+g = c(0.01, 0.1, 1, 10) # gene
+e = c(0.01, 0.1, 1, 10) # environment
+interaction = 0
+n <- 1000
+
+expit<-function(z){1/(1+exp(-(z)))}
+
+simdata = tibble::tibble(
+      gene = rbinom(n, 1, .25),
+      environment = rbinom(n, 1, .25),
+      outcome = rbinom(n,
+                       1,
+                       expit(0.1*gene+0.1*environment+interaction*gene*environment)))
+
+fit <- lm(outcome ~ gene+environment, 
+               data = simdata)
+simdata$prob <- predict(fit, type = "response")
+
+cols <- brewer.pal(6, "Paired")
+ggplot(simdata, aes(gene, prob, color = factor(environment))) +
+  geom_point() + 
+  geom_line() +
+  labs(x = 'The presence of the gene',
+       y = 'Probability of the outcome') +
+  theme_classic() +
+  theme(
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 8),
+    text = element_text(family = 'Helvetica'),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank()
+  ) +
+  scale_color_manual(values=cols[c(2,6)],
+                     name = "Legend",
+                     breaks = c("0", "1"),
+                     labels = c("Environment +", "Environment -"))
+```
+
+
+```{r}
+set.seed(1234)
+
+for (i in 1:length(g)){
+  for (j in 1:length(e)) {
+    
+    simdata = tibble::tibble(
+      gene = rbinom(n, 1, .25),
+      environment = rbinom(n, 1, .25),
+      outcome = rbinom(n,
+                       1,
+                       expit(g[i]*gene+e[j]*environment+interaction*gene*environment)))
+
+fit <- glm(outcome ~ gene*environment, 
+               family = binomial(link = "logit"),
+               data = simdata)
+
+simdata$prob <- predict(fit, type = "response")
+
+fig <- ggplot(simdata, aes(gene, prob, color = factor(environment))) +
+  geom_point() + 
+  geom_line() +
+  labs(x = 'The presence of the gene',
+       y = 'Probability of the outcome',
+       title = paste("Gene effect of", g[i], "and environment effect of", e[j])) +
+  theme_classic() +
+  theme(
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 8),
+    text = element_text(family = 'Helvetica'),
+    axis.ticks.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.y = element_blank()
+  ) +
+  scale_color_manual(values=cols[c(2,6)],
+                     name = "Legend",
+                     breaks = c("0", "1"),
+                     labels = c("Environment +", "Environment -"))
+print(fig)
+}}
+```
+
